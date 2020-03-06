@@ -8,8 +8,8 @@
  * @link       http://example.com
  * @since      1.0.0
  *
- * @package    Plugin_Name
- * @subpackage Plugin_Name/public/partials
+ * @package    Wp_Osprey_Upload
+ * @subpackage Wp_Osprey_Upload/public/partials
  */
 ?>
 
