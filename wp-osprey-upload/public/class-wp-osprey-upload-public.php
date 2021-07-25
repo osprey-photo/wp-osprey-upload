@@ -3,7 +3,7 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       http://example.com
+ * @link       https://github.com/osprey-photo/wp-osprey-upload
  * @since      1.0.0
  *
  * @package    Wp_Osprey_Upload
@@ -11,10 +11,6 @@
  */
 
 /**
- * The public-facing functionality of the plugin.
- *
- * Defines the plugin name, version, and two examples hooks for how to
- * enqueue the public-facing stylesheet and JavaScript.
  *
  * @package    Wp_Osprey_Upload
  * @subpackage Wp_Osprey_Upload/public
@@ -120,8 +116,15 @@ class Wp_Osprey_Upload_Public {
 				return;
 			}
 			
+			global $wpdb;
+			$sql = "SELECT * FROM  {$wpdb->prefix}osprey_purposes  WHERE enabled=1  ";
+			$result = $wpdb->get_results( $sql, 'ARRAY_A' );
+
+
 			$dataToBePassed = array(
-				'user'            => $current_user->user_login 
+				'user'         => $current_user->user_login,
+				'displayname' => $current_user->display_name,
+				'purposes'     => $result
 			);
 			wp_localize_script( $this->plugin_name, 'php_vars', $dataToBePassed );
 

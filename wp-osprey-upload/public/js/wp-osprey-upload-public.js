@@ -3,73 +3,96 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Matthew B White https://github.com/osprey-photo/wp-osprey-upload
-(function( $ ) {
-	'use strict';
-	
-	const username='';
+
+(function ($) {
+	"use strict";
+
+	const NAMETITLE_SEP = "%";
+
+	console.log("Hello Upload starting");
+	const username = "";
 	const showDetails = function () {
-		var details = $('#filedetails :input[name="title"]')
-		console.log(php_vars);
+		var details = $('#filedetails :input[name="title"]');
+
 		$(details).each(function (index) {
 			var imgid = details[index].id;
 			var title = details[index].value;
 			var purpose = $(`#${imgid}-purpose option:selected`).text();
-			var file = $('.my-pond').filepond('getFile', imgid);
-			console.log(` ID=${imgid} Title=${title}, Purpose=${purpose}`)
-			file.setMetadata({title, purpose, imgid, filename: file.filename, username:php_vars.user})
-			$('.my-pond').filepond('processFile', imgid);
+			let purposeId = $(`#${imgid}-purpose option:selected`).val();
+			// if (purpose.startsWith("Other")) {
+			// 	purpose = "Other:" + $(`#${imgid}-other`).val();
+			// }
+			var file = $(".my-pond").filepond("getFile", imgid);
+			console.log(` ID=${imgid} Title=${title}, Purpose=${purpose} ${purposeId}`);
+			file.setMetadata({
+				title,
+				purpose:purposeId,
+				imgid,
+				filename: file.filename,
+				username: php_vars.user,
+				displayname: php_vars.displayname
+			});
+			$(".my-pond").filepond("processFile", imgid);
 		});
 		//;
-	}
+	};
 
 	var isLoadingCheck = function () {
-		var isLoading = $('.my-pond')
-			.filepond('getFiles')
-			.filter(x => x.status !== 5)
-			.length !== 0;
+		var isLoading =
+			$(".my-pond")
+				.filepond("getFiles")
+				.filter((x) => x.status !== 5).length !== 0;
 		if (isLoading) {
-			console.log('Loading images...')
+			console.log("Loading images...");
 		} else {
-			console.log('Images loaded')
-			var dataString = new FormData($('#ofu_uploadform')[0])
+			console.log("Images loaded");
+			var dataString = new FormData($("#ofu_uploadform")[0]);
 			$.ajax({
 				type: "POST",
-				url: "osprey/api/submit.php",
+				url: "/osprey/api/submit.php",
 				contentType: false,
 				data: dataString,
 				processData: false,
 				success: function (data, textStatus) {
-					console.log('done [' + textStatus + '] ' + data);
-					$('#results').text("All submitted.. thanks!");
-				}
+					console.log("done [" + textStatus + "] " + data);
+					$("#results").text(
+						"Thanks!  If you wish to submit more, please refresh the page."
+					);
+					$("#osprey-submit-btn").prop("disabled", true);
+					$("#osprey-submit-btn span").text("All submitted");
+				},
 			});
 		}
-	}
+	};
 
 	$(function () {
-		if (typeof php_vars === "undefined"){
+		if (typeof php_vars === "undefined") {
 			return;
 		}
 		console.log(php_vars);
-		
+
 		// Turn a file input into a file pond
 		// var pond = FilePond.create(document.querySelector('input[type="file"]'));
 		// First register any plugins
-		$
-			.fn
-			.filepond
-			.registerPlugin(FilePondPluginImagePreview,FilePondPluginFileRename,FilePondPluginFileMetadata,FilePondPluginImageExifOrientation,FilePondFileResize,FilePondPluginImageTransform/*, , FilePondPluginFileValidateSize, , , */);
+		$.fn.filepond.registerPlugin(
+			FilePondPluginImagePreview,
+			FilePondPluginFileRename,
+			FilePondPluginFileMetadata,
+			FilePondPluginImageExifOrientation
+		);
 
 		// Turn input element into a pond with configuration options
-		var pond = $('.my-pond').filepond({
+		var pond = $(".my-pond").filepond({
 			allowMultiple: true,
 			// upload to this server end point
-			server: 'osprey/api/index.php',
+			server: "/osprey/api/index.php",
 			instantUpload: false,
-			imageResizeTargetWidth: 800,
-			imageResizeMode: 'contain',
+			allowRevert: false,
+			allowProcess: false,
+			imageResizeTargetWidth: 1600,
+			imageResizeMode: "contain",
 			fileMetadataObject: {
-				'hello': 'world'
+				user: `${php_vars.user}`,
 			},
 			onaddfilestart: (file) => {
 				isLoadingCheck();
@@ -78,35 +101,78 @@
 				isLoadingCheck();
 			},
 			fileRenameFunction: (file) => {
-				console.log(file);
-				return `${php_vars.user}_${file.name}`;
+				return `${file.name}`;
+			},
+		});
+
+
+		// Listen for addfile event
+		// A file has been added to the queue for uploading
+		$(".my-pond").on("FilePond:addfile", function (e) {
+			$("#osprey-submit-btn").prop("disabled", false);
+
+			console.log("file added event", e.detail.file);
+			var fileUploaded = e.detail.file;
+			let filerowId = `${fileUploaded.id}-row`;
+
+			let purposeOptions = php_vars.purposes
+				.map((p) => {
+					return `<option value="${p.id}">${p.title}</option>`;
+				})
+				.join("\n");
+
+			const reasonSelect = `
+<select id="${fileUploaded.id}-purpose" name="purpose">
+${purposeOptions}
+</select> 
+`;
+
+			/*
+			The oringal other field
+			<input type="text" id="${fileUploaded.id}-other" name="other">
+			*/
+
+			let trimmed_title = fileUploaded.filenameWithoutExtension.substring(
+				fileUploaded.filenameWithoutExtension.indexOf(NAMETITLE_SEP) + 1
+			);
+
+			const titleInput = `<input type="text" id="${fileUploaded.id}" name="title" value="${trimmed_title}">`;
+
+			$("#filedetails > tbody:last-child").append(
+				`<tr id="${filerowId}"><td>${fileUploaded.filename}</td><td>${titleInput}</td> <td>${reasonSelect}</td></tr>`
+			);
+		});
+
+		$(".my-pond").on("FilePond:removefile", function (e) {
+			console.log("file added event", e.detail.file);
+			let filerowId = `${e.detail.file.id}-row`;
+			$(`#${filerowId}`).remove();
+		});
+
+		$(".button").click(function (e) {
+			e.preventDefault();
+
+			var details = $('#filedetails :input[name="title"]');
+			let inError = false;
+			// validate the input
+			$(details).each(function (index) {
+				var imgid = details[index].id;
+				var title = details[index].value;
+				if (title.trim() === "") {
+					$("#results").text(`Please make sure images have titles`);
+					inError = true;
+				}
+			});
+
+			if (!inError) {
+				pond.disabled = true;
+				showDetails();
+				$("#osprey-submit-btn").prop("disabled", true);
+				$("#osprey-submit-btn span").text("Submission in progress");
+				$("#results").text("Working...");
 			}
 		});
-               // Listen for addfile event
-			   $('.my-pond').on('FilePond:addfile', function (e) {
-				console.log('file added event', e.detail.file);
-				var fileUploaded = e.detail.file;
-
-				const reasonSelect = `  <select id="${fileUploaded.id}-purpose" name="purpose">
-<option value="competition">Competition</option>
-<option value="exhibition">Exhibition</option>
-<option value="other">Other</option>
-</select>`;
-
-				const titleInput = `<input type="text" id="${fileUploaded.id}" name="title">`;
-				var trimmed_filename = fileUploaded.filename.substring(fileUploaded.filename.indexOf('_')+1);
-				$('#filedetails > tbody:last-child').append(`<tr><td>${ trimmed_filename}</td><td>${titleInput}</td> <td>${reasonSelect}</td></tr>`)
-
-			});
-
-			$(".button").click(function (e) {
-				e.preventDefault();
-
-				showDetails();
-
-				$('#results').text("Submitting...");
-			});
-		});		
+	});
 	/**
 	 * All of the code for your public-facing JavaScript source
 	 * should reside in this file.
@@ -135,4 +201,38 @@
 	 * practising this, we should strive to set a better example in our own work.
 	 */
 
-})( jQuery );
+	$(".addMediaLibrary").click(function (e) {
+		var productID = $(this).attr("imageid");
+		$.ajax({
+			url: "/wp-admin/admin-ajax.php",
+			type: "POST",
+			dataType: "JSON",
+			data: {
+				// the value of data.action is the part AFTER 'wp_ajax_' in
+				// the add_action ('wp_ajax_xxx', 'yyy') in the PHP above
+				action: "call_add_media_library",
+				// ANY other properties of data are passed to your_function()
+				// in the PHP global $_REQUEST (or $_POST in this case)
+				id: productID,
+			},
+			success: function (resp) {
+				if (resp.success) {
+					// if you wanted to use the return value you set
+					// in your_function(), you would do so via
+					// resp.data, but in this case I guess you don't
+					// need it
+					console.log("Got response");
+				} else {
+					// this "error" case means the ajax call, itself, succeeded, but the function
+					// called returned an error condition
+					alert("Error: " + resp.data);
+				}
+			},
+			error: function (xhr, ajaxOptions, thrownError) {
+				// this error case means that the ajax call, itself, failed, e.g., a syntax error
+				// in your_function()
+				alert("Request failed: " + thrownError.message);
+			},
+		});
+	});
+})(jQuery);

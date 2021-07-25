@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+
+        <title>FilePond PHP Boilerplate Project</title>
+
+        <!-- Get FilePond and FilePond image preview plugin styles from a CDN -->
+        <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+        <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
+
+        <style>
+            /* FilePond will automatically fill up all available horizontal space, it's best to limit it in some way */
+            form {
+                max-width: 24em;
+            }
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    </head>
+    <body>
+
+        <form action="" method="post" enctype="multipart/form-data" id="uploadform">
+
+            <input type="file" class="my-pond" name="filepond[]" multiple="multiple">
+
+        </form>
+
+        <form id="detailsform">
+            <table id="filedetails">
+                <tbody>
+                    <tr>
+                        <td>Filename</td>
+                        <td>Title</td>
+                        <td>Purpose</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <button type="submit" class="button">Submit</button>
+        </form>
+
+        <div>
+            <p id="results"></p>
+            <div id="busyspinner"></div>
+        </div>
+
+        <!-- Babel polyfill, contains Promise -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.15/browser-polyfill.min.js"></script>
+
+        <!-- Get FilePond polyfills from the CDN -->
+        <script src="https://unpkg.com/filepond-polyfill/dist/filepond-polyfill.js"></script>
+
+        <!-- Get FilePond JavaScript and its plugins from the CDN -->
+        <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-image-resize/dist/filepond-plugin-image-resize.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-image-crop/dist/filepond-plugin-image-crop.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-image-exif-orientation/dist/filepond-plugin-image-exif-orientation.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-image-transform/dist/filepond-plugin-image-transform.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-file-metadata/dist/filepond-plugin-file-metadata.js"></script>
+        <script src="https://unpkg.com/filepond-plugin-file-rename/dist/filepond-plugin-file-rename.js"></script>
+        <!-- include FilePond jQuery adapter -->
+        <script src="https://unpkg.com/jquery-filepond/filepond.jquery.js"></script>
+        <!-- FilePond init script -->
+        <script>
+
+            const username = 'fred'; // get user from wordpress
+
+            const showDetails = function () {
+                var details = $('#filedetails :input[name="title"]')
+
+                $(details).each(function (index) {
+                    var imgid = details[index].id;
+                    var title = details[index].value;
+                    var purpose = $(`#${imgid}-purpose option:selected`).text();
+                    var file = $('.my-pond').filepond('getFile', imgid);
+                    console.log(` ID=${imgid} Title=${title}, Purpose=${purpose}`)
+                    file.setMetadata({title, purpose, imgid, filename: file.filename, username})
+                    $('.my-pond').filepond('processFile', imgid);
+                });
+                //;
+            }
+
+            function isLoadingCheck() {
+                var isLoading = $('.my-pond')
+                    .filepond('getFiles')
+                    .filter(x => x.status !== 5)
+                    .length !== 0;
+                if (isLoading) {
+                    console.log('is loading')
+                    //   $('#detailsform [type="submit"]').attr("disabled", "disabled");
+                } else {
+                    console.log('loaded')
+                    var dataString = new FormData($('#uploadform')[0])
+                    $.ajax({
+                        type: "POST",
+                        url: "osprey/api/submit.php",
+                        contentType: false,
+                        data: dataString,
+                        processData: false,
+                        success: function (data, textStatus) {
+                            console.log('done [' + textStatus + '] ' + data);
+                            $('#results').text("All submitted.. thanks!");
+                        }
+                    });
+                    //  $('#detailsform [type="submit"]').removeAttr("disabled");
+                }
+            }
+
+            $(function () {
+                // Turn a file input into a file pond
+                // var pond = FilePond.create(document.querySelector('input[type="file"]'));
+                // First register any plugins
+                $
+                    .fn
+                    .filepond
+                    .registerPlugin(FilePondPluginFileRename, FilePondPluginFileMetadata, FilePondPluginFileValidateSize, FilePondPluginImageExifOrientation, FilePondPluginImagePreview, FilePondPluginImageTransform);
+
+                // Turn input element into a pond with configuration options
+                var pond = $('.my-pond').filepond({
+                    allowMultiple: true,
+                    // upload to this server end point
+                    server: 'osprey/api/index.php',
+                    instantUpload: false,
+                    fileMetadataObject: {
+                        'hello': 'world'
+                    },
+                    onaddfilestart: (file) => {
+                        isLoadingCheck();
+                    },
+                    onprocessfile: (files) => {
+                        isLoadingCheck();
+                    },
+                    fileRenameFunction: (file) => {
+                        console.log(file);
+                        return `${username}_${file.name}`;
+                    }
+                });
+
+                // Listen for addfile event
+                $('.my-pond').on('FilePond:addfile', function (e) {
+                    console.log('file added event', e.detail.file);
+                    var fileUploaded = e.detail.file;
+
+                    const reasonSelect = `  <select id="${fileUploaded.id}-purpose" name="purpose">
+    <option value="competition">Competition</option>
+    <option value="exhibition">Exhibition</option>
+    <option value="other">Other</option>
+  </select>`;
+
+                    const titleInput = `<input type="text" id="${fileUploaded.id}" name="title">`;
+                    $('#filedetails > tbody:last-child').append(`<tr><td>${fileUploaded.filename}</td><td>${titleInput}</td> <td>${reasonSelect}</td></tr>`)
+
+                });
+
+                $(".button").click(function (e) {
+                    e.preventDefault();
+
+                    showDetails();
+
+                    $('#results').text("Submitting...");
+                });
+            });
+        </script>
+
+    </body>
+</html>

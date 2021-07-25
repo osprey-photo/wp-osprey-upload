@@ -1,0 +1,6 @@
+[13-Feb-2020 22:16:16 Europe/London] PHP Parse error:  syntax error, unexpected 'echo' (T_ECHO) in /home/bishopswalthamph/public_html/osprey/dbadmin.php on line 7
+[13-Feb-2020 22:16:49 Europe/London] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'bishopw_osprey'@'localhost' (using password: YES) in /home/bishopswalthamph/public_html/osprey/dbadmin.php on line 16
+[13-Feb-2020 22:18:38 Europe/London] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'bishopw_osprey'@'localhost' (using password: YES) in /home/bishopswalthamph/public_html/osprey/dbadmin.php on line 16
+[13-Feb-2020 22:18:40 Europe/London] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'bishopw_osprey'@'localhost' (using password: YES) in /home/bishopswalthamph/public_html/osprey/dbadmin.php on line 16
+[13-Feb-2020 22:18:41 Europe/London] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'bishopw_osprey'@'localhost' (using password: YES) in /home/bishopswalthamph/public_html/osprey/dbadmin.php on line 16
+[13-Feb-2020 22:18:42 Europe/London] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'bishopw_osprey'@'localhost' (using password: YES) in /home/bishopswalthamph/public_html/osprey/dbadmin.php on line 16
